@@ -51,6 +51,23 @@ llong powmod(llong base, llong exp, llong m) {
   return result;
 }
 
+// chinese remainder theorem for coprime moduli
+llong chinrem_coprime(llong as[], llong ps[], int len) {
+  llong mod = 1;
+  for (int i = 0; i < len; ++i) mod *= ps[i];
+  llong x[len];
+  llong p = 1, y = 0;;
+  llong res = x[0] = as[0];
+  for (int i = 1; i < len; ++i) {
+    y += x[i-1]*p;
+    p *= ps[i-1];
+    x[i] = (as[i] - y) * mod_inverse(p, ps[i]);
+    res = (res + x[i] * p) % mod;
+  }
+  while (res < 0) res += mod;
+  return res;
+}
+
 // the below two functions are a port of
 // http://www.cse.sc.edu/~maxal/gpscripts/binomod.gp to C++
 llong facmodpq(llong n, llong p, llong q) {
@@ -67,20 +84,6 @@ llong facmodpq(llong n, llong p, llong q) {
       r = (r * i) % pq;
   while (r < 0) r += pq;
   return r;
-}
-
-llong chin_remainder_4(llong a1, llong a2, llong a3, llong a4,
-                       llong p1, llong p2, llong p3, llong p4) {
-  llong s2 = mod_inverse(p1, p2);
-  llong s3 = mod_inverse(p1*p2, p3);
-  llong s4 = mod_inverse(p1*p2*p3, p4);
-  llong x1 = a1;
-  llong x2 = (a2 - x1) * s2;
-  llong x3 = (a3 - x1 - x2*p1) * s3;
-  llong x4 = (a4 - x1 - x2*p1 - x3*p1*p2) * s4;
-  llong res = (x1 + x2*p1 + x3*p1*p2 + x4*p1*p2*p3) % (p1*p2*p3*p4);
-  while (res < 0) res += p1*p2*p3*p4;
-  return res;
 }
 
 const int maxdigs = 20; // maximum number of digits in base p
@@ -159,10 +162,10 @@ int main() {
   llong n, r;
   for (int i = 0; i < T; ++i) {
     cin >> n >> r;
-    int a1 = binomod(n, r, 3, 3);
-    int a2 = binomod(n, r, 11, 1);
-    int a3 = binomod(n, r, 13, 1);
-    int a4 = binomod(n, r, 37, 1);
-    cout << chin_remainder_4(a1, a2, a3, a4, 27, 11, 13, 37) << endl;
+    // compute binomial coefficient modulo 142857 = 3^3 * 11 * 13 * 37
+    llong a[] = { binomod(n, r, 3, 3), binomod(n, r, 11, 1),
+                  binomod(n, r, 13, 1), binomod(n, r, 37, 1) };
+    llong p[] = { 27, 11, 13, 37 };
+    cout << chinrem_coprime(a, p, 4) << endl;
   }
 }
